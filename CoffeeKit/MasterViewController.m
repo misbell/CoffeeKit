@@ -7,7 +7,13 @@
 //
 
 #import "MasterViewController.h"
-#import "DetailViewController.h"
+#import <RestKit/Restkit.h>
+#import "Venue.h"
+
+
+// OAuth information
+#define kCLIENTID @"FY0453QVDE3RDBQP15FY0XSFWEPWLRMNMIEFEUN20SRLV34J"
+#define kCLIENTSECRET @"EACRSRLOJHYIH55EV1YFLG3ZU3Q4QVI2ZJOVRR3MV2VUHXDL"
 
 @interface MasterViewController ()
 
@@ -22,9 +28,13 @@
 
 - (void)viewDidLoad {
     [super viewDidLoad];
+    
+    [self configureRestKit];
+    [self loadVenues];
+    
     // Do any additional setup after loading the view, typically from a nib.
     self.navigationItem.leftBarButtonItem = self.editButtonItem;
-
+    
     UIBarButtonItem *addButton = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemAdd target:self action:@selector(insertNewObject:)];
     self.navigationItem.rightBarButtonItem = addButton;
 }
@@ -43,15 +53,39 @@
     [self.tableView insertRowsAtIndexPaths:@[indexPath] withRowAnimation:UITableViewRowAnimationAutomatic];
 }
 
+#pragma mark - Restkit
+
+- (void) configureRestKit {
+    // init AFNetworking
+    NSURL *baseURL = [NSURL URLWithString:@"https://api.foursquare.com"];
+    AFHTTPClient *client = [[AFHTTPClient alloc] initWithBaseURL:baseURL];
+    
+    // init RestKit
+    RKObjectManager *objectManager = [[RKObjectManager alloc] initWithHTTPClient: client];
+    
+    // setup object mappings
+    RKObjectMapping *venueMapping = [RKObjectMapping mappingForClass:[Venue class]];
+    [venueMapping addAttributeMappingsFromArray:@[@"name"]];
+    
+    // resigter mappingds with the provider usinga ersponse descriptor
+    RKResponseDescriptor *responseDescriptor =
+    [RKResponseDescriptor responseDescriptorWithMapping: venueMapping
+                                                 method: RKRequestMethodGET
+                                            pathPattern: @"/v2/venues/search"
+                                                keyPath: @"response.venues"
+                                            statusCodes: [NSIndexSet indexSetWithIndex: 200]];
+    
+    [objectManager addResponseDescriptor: responseDescriptor];
+    
+}
+
+- (void) loadVenues {
+    
+}
+
 #pragma mark - Segues
 
-- (void)prepareForSegue:(UIStoryboardSegue *)segue sender:(id)sender {
-    if ([[segue identifier] isEqualToString:@"showDetail"]) {
-        NSIndexPath *indexPath = [self.tableView indexPathForSelectedRow];
-        NSDate *object = self.objects[indexPath.row];
-        [[segue destinationViewController] setDetailItem:object];
-    }
-}
+
 
 #pragma mark - Table View
 
@@ -65,7 +99,7 @@
 
 - (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
     UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:@"Cell" forIndexPath:indexPath];
-
+    
     NSDate *object = self.objects[indexPath.row];
     cell.textLabel.text = [object description];
     return cell;
